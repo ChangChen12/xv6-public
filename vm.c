@@ -392,6 +392,65 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+//mprotect function.
+int
+mprotect(void *addr, int len)
+{
+  pte_t *x;
+  struct proc *proc = myproc();
+  int i;
+  
+  if(len * PGSIZE +(int)addr > (proc->vlimit)|| len <= 0){
+    return -1;
+  }
+  if((int)(((int)addr) % PGSIZE ) != 0){
+    return -1;
+  }
+  for (i = (int)addr; i < ((len)*PGSIZE+(int)addr); i = i+PGSIZE){
+    x = walkpgdir(proc->pgdir,(void*) i, 0);
+    if((((*x & PTE_P) != 0) != 0) && ((*x & PTE_U) && x))
+    {
+      *x = (*x) & (~PTE_W);
+    }
+    else {
+      return -1;
+    }
+
+  }
+  //update page flag.
+  lcr3(V2P(proc->pgdir));
+
+  return 0;
+}
+
+//munprotect function.
+int
+munprotect(void *addr, int len)
+{
+  struct proc *proc = myproc();
+  pte_t *x;
+  int i;
+  if(len*PGSIZE +(int)addr > (proc->vlimit) || len <= 0){
+    return -1;
+  }
+  if((int)(((int)addr) % PGSIZE ) != 0){ 
+    return -1;
+  }
+  for (i = (int)addr; i < ((len)*PGSIZE+(int)addr); i = i+PGSIZE){
+    x = walkpgdir(proc->pgdir,(void*) i, 0);
+    if(((*x & PTE_P) != 0) && x && ((*x & PTE_U) != 0))
+    {
+      *x = (*x) | (PTE_W);
+    }
+    else{
+      return -1;
+    }
+  }
+  //update page flag.
+  lcr3(V2P(proc->pgdir));
+  return 0;
+}
+
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!
